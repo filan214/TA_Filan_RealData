@@ -81,19 +81,25 @@ def integrate_google_trends(weekly_sales, trends_df):
 
 
 def create_features(df):
-    """Feature engineering (Bab III §3.1.3 sub-step 5 / §3.2.2)."""
+    """Feature engineering (Bab III §3.1.3 sub-step 5 / §3.2.2).
+
+    Leakage-free: every series-derived feature uses only information available
+    *before* the week being predicted. Rolling windows are shifted by 1 so they
+    never include sales[t], and sales_diff is the last *observed* change
+    (sales[t-1] - sales[t-2]). Lag features are already shifted correctly.
+    """
     df = df.copy()
     for lag in [1, 2, 4, 8, 12]:
         df[f"lag_{lag}"] = df["sales"].shift(lag)
-    df["rolling_mean_4w"] = df["sales"].rolling(4).mean()
-    df["rolling_std_4w"] = df["sales"].rolling(4).std()
-    df["rolling_mean_12w"] = df["sales"].rolling(12).mean()
-    df["rolling_std_12w"] = df["sales"].rolling(12).std()
+    df["rolling_mean_4w"] = df["sales"].rolling(4).mean().shift(1)
+    df["rolling_std_4w"] = df["sales"].rolling(4).std().shift(1)
+    df["rolling_mean_12w"] = df["sales"].rolling(12).mean().shift(1)
+    df["rolling_std_12w"] = df["sales"].rolling(12).std().shift(1)
     df["week_of_year"] = df.index.isocalendar().week.astype(int)
     df["month"] = df.index.month
     df["quarter"] = df.index.quarter
     df["year"] = df.index.year
-    df["sales_diff"] = df["sales"].diff()
+    df["sales_diff"] = df["sales"].diff().shift(1)
     df.dropna(inplace=True)
     return df
 
